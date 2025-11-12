@@ -1,0 +1,56 @@
+name: 完整工作流
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      # 前端测试流程
+      - name: 配置前端Node环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './frontend/package-lock.json'
+      - name: 安装前端依赖
+        run: cd frontend && npm install
+      - name: 运行前端测试
+        run: cd frontend && npm test
+      
+      # 后端测试流程
+      - name: 配置后端Node环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './backend/package-lock.json'
+      - name: 安装后端依赖
+        run: cd backend && npm install
+      - name: 运行后端测试
+        run: cd backend && npm test
+
+  # 可选：前端部署到Vercel（按需启用）
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 配置Node环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 安装前端依赖
+        run: cd frontend && npm install
+      - name: 构建前端项目
+        run: cd frontend && npm run build
+      - name: 部署到Vercel
+        uses: amondnet/vercel-action@v20
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          vercel-project-directory: './frontend'
