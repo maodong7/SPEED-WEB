@@ -37,6 +37,12 @@ let SubmissionsController = class SubmissionsController {
             data: await this.submissionsService.findReviewed(),
         };
     }
+    async findApproved() {
+        return {
+            status: common_1.HttpStatus.OK,
+            data: await this.submissionsService.findApproved(),
+        };
+    }
 };
 exports.SubmissionsController = SubmissionsController;
 __decorate([
@@ -54,6 +60,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], SubmissionsController.prototype, "findReviewed", null);
+__decorate([
+    (0, common_1.Get)('approved'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SubmissionsController.prototype, "findApproved", null);
 exports.SubmissionsController = SubmissionsController = __decorate([
     (0, common_1.Controller)('api/submissions'),
     __metadata("design:paramtypes", [submissions_service_1.SubmissionsService])

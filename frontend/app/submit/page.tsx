@@ -1,11 +1,19 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
 import Navbar from '@/components/Navbar';
+import axios from '@/utils/axios';
+
+// 表单数据类型
+type FormData = {
+  title: string;
+  doi: string;
+  author: string;
+  email: string;
+};
 
 export default function SubmitPage() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     title: '',
     doi: '',
     author: '',
@@ -13,30 +21,54 @@ export default function SubmitPage() {
   });
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isFormValid, setIsFormValid] = useState(false);
   const router = useRouter();
 
-  // 登录校验：未登录跳登录页
+  // 未登录跳登录页
   useEffect(() => {
     if (!localStorage.getItem('token')) {
       router.push('/auth/login');
+    } else {
+      // 初始化用户邮箱（从本地存储获取）
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (user.email) {
+        setFormData(prev => ({ ...prev, email: user.email }));
+      }
     }
   }, [router]);
 
+  // 表单校验（所有字段非空+邮箱格式正确）
+  useEffect(() => {
+    const allFieldsFilled = Object.values(formData).every(val => val.trim() !== '');
+    const isEmailValid = /^[\w-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/.test(formData.email);
+    setIsFormValid(allFieldsFilled && isEmailValid);
+  }, [formData]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError('');
+    setSuccess('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isFormValid) return;
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
     try {
-      const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3001/api/submissions', formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setSuccess('文献提交成功，等待审核');
-      setFormData({ title: '', doi: '', author: '', email: '' });
+      // 调用后端真实提交文献接口
+      await axios.post('/api/submissions', formData);
+      setSuccess('文献提交成功，等待审核员审核');
+      // 清空表单
+      setFormData({ title: '', doi: '', author: '', email: formData.email });
     } catch (err: any) {
-      setError(err.response?.data?.message || '提交失败，请重试');
+      setError(err || '提交失败，请重试');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -56,8 +88,9 @@ export default function SubmitPage() {
               name="title"
               value={formData.title}
               onChange={handleChange}
-              required
               style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              placeholder="请输入文献标题"
+              required
             />
           </div>
           <div style={{ marginBottom: '1rem' }}>
@@ -68,8 +101,9 @@ export default function SubmitPage() {
               name="doi"
               value={formData.doi}
               onChange={handleChange}
-              required
               style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              placeholder="格式示例：10.1038/nature12345"
+              required
             />
           </div>
           <div style={{ marginBottom: '1rem' }}>
@@ -80,8 +114,9 @@ export default function SubmitPage() {
               name="author"
               value={formData.author}
               onChange={handleChange}
-              required
               style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              placeholder="请输入作者姓名"
+              required
             />
           </div>
           <div style={{ marginBottom: '1.5rem' }}>
@@ -92,15 +127,25 @@ export default function SubmitPage() {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              required
               style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              placeholder="请输入联系邮箱"
+              required
             />
           </div>
           <button
             type="submit"
-            style={{ width: '100%', padding: '0.8rem', backgroundColor: '#0071e3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+            style={{ 
+              width: '100%', 
+              padding: '0.8rem', 
+              backgroundColor: isFormValid ? '#0071e3' : '#ccc', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px', 
+              cursor: isFormValid ? 'pointer' : 'not-allowed' 
+            }}
+            disabled={loading || !isFormValid}
           >
-            提交
+            {loading ? '提交中...' : '提交'}
           </button>
         </form>
       </div>

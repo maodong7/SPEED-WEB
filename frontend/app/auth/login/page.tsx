@@ -1,31 +1,53 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
 import Navbar from '@/components/Navbar';
+import axios from '@/utils/axios';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isFormValid, setIsFormValid] = useState(false);
   const router = useRouter();
 
-  // 表单输入变更
+  // 已登录状态下跳首页
+  useEffect(() => {
+    if (localStorage.getItem('token')) {
+      router.push('/');
+    }
+  }, [router]);
+
+  // 表单校验
+  useEffect(() => {
+    const isValid = formData.username.trim() !== '' && formData.password.trim() !== '';
+    setIsFormValid(isValid);
+  }, [formData]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError(''); // 输入时清空错误提示
   };
 
-  // 提交登录
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isFormValid) return;
+
+    setLoading(true);
+    setError('');
+
     try {
-      const res = await axios.post('http://localhost:3001/api/users/login', formData);
-      // 存储token和用户信息
-      localStorage.setItem('token', res.data.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.data.user));
-      router.push('/'); // 登录成功跳首页
+      // 调用后端真实登录接口
+      const res = await axios.post('/api/users/login', formData);
+      // 存储真实Token和用户信息
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data.user));
+      router.push('/');
       window.location.reload();
     } catch (err: any) {
-      setError(err.response?.data?.message || '登录失败，请检查账号密码');
+      setError(err || '登录失败，请检查账号密码是否正确');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -44,8 +66,9 @@ export default function LoginPage() {
               name="username"
               value={formData.username}
               onChange={handleChange}
-              required
               style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              placeholder="请输入用户名"
+              required
             />
           </div>
           <div style={{ marginBottom: '1.5rem' }}>
@@ -56,15 +79,25 @@ export default function LoginPage() {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              required
               style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              placeholder="请输入密码"
+              required
             />
           </div>
           <button
             type="submit"
-            style={{ width: '100%', padding: '0.8rem', backgroundColor: '#0071e3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+            style={{ 
+              width: '100%', 
+              padding: '0.8rem', 
+              backgroundColor: isFormValid ? '#0071e3' : '#ccc', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px', 
+              cursor: isFormValid ? 'pointer' : 'not-allowed' 
+            }}
+            disabled={loading || !isFormValid}
           >
-            登录
+            {loading ? '登录中...' : '登录'}
           </button>
           <p style={{ textAlign: 'center', marginTop: '1rem' }}>
             没有账号？<a href="/auth/register" style={{ color: '#0071e3', textDecoration: 'none' }}>立即注册</a>

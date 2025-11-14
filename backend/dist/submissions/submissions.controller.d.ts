@@ -7,9 +7,13 @@ export declare class SubmissionsController {
     reviewSubmission(submissionId: string, reviewDto: ReviewSubmissionDto, req: any): Promise<{
         status: HttpStatus;
         message: string;
-        data: import("./schemas/submission.schema").Submission;
+        data: any;
     }>;
     findReviewed(): Promise<{
+        status: HttpStatus;
+        data: any;
+    }>;
+    findApproved(): Promise<{
         status: HttpStatus;
         data: import("./schemas/submission.schema").Submission[];
     }>;

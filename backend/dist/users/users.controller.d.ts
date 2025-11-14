@@ -1,18 +1,25 @@
 import { HttpStatus } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { LoginUserDto } from './dto/login-user.dto';
+import { AddCollectionDto, RemoveCollectionDto } from './dto/collection.dto';
 export declare class UsersController {
     private readonly usersService;
     constructor(usersService: UsersService);
-    register(createUserDto: CreateUserDto): Promise<{
+    addCollection(dto: AddCollectionDto, req: any): Promise<{
         status: HttpStatus;
         message: string;
-        data: any;
+        data: import("./schemas/user.schema").User;
     }>;
-    login(loginUserDto: LoginUserDto): Promise<{
+    removeCollection(dto: RemoveCollectionDto, req: any): Promise<{
         status: HttpStatus;
         message: string;
+        data: import("./schemas/user.schema").User;
+    }>;
+    getCollections(req: any): Promise<{
+        status: HttpStatus;
+        data: import("../submissions/schemas/submission.schema").Submission[];
+    }>;
+    getProfile(req: any): Promise<{
+        status: HttpStatus;
         data: any;
     }>;
 }

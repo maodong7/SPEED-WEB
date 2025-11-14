@@ -18,26 +18,48 @@ const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const user_schema_1 = require("./schemas/user.schema");
 const jwt_1 = require("@nestjs/jwt");
+const submission_schema_1 = require("../submissions/schemas/submission.schema");
 let UsersService = class UsersService {
     userModel;
+    submissionModel;
     jwtService;
-    constructor(userModel, jwtService) {
+    constructor(userModel, submissionModel, jwtService) {
         this.userModel = userModel;
+        this.submissionModel = submissionModel;
         this.jwtService = jwtService;
     }
-    async findById(userId) {
-        const user = await this.userModel.findById(userId).exec();
-        if (!user) {
-            throw new common_1.NotFoundException('审核员不存在');
+    async addCollection(userId, dto) {
+        const submission = await this.submissionModel.findById(dto.submissionId);
+        if (!submission) {
+            throw new common_1.NotFoundException('文献不存在');
         }
-        return user;
+        const user = await this.userModel.findById(userId);
+        if (user.collections.includes(dto.submissionId)) {
+            throw new common_1.ConflictException('已收藏该文献');
+        }
+        user.collections.push(dto.submissionId);
+        return user.save();
+    }
+    async removeCollection(userId, dto) {
+        const user = await this.userModel.findById(userId);
+        if (!user.collections.includes(dto.submissionId)) {
+            throw new common_1.NotFoundException('未收藏该文献');
+        }
+        user.collections = user.collections.filter(id => id !== dto.submissionId);
+        return user.save();
+    }
+    async getCollections(userId) {
+        const user = await this.userModel.findById(userId);
+        return this.submissionModel.find({ _id: { $in: user.collections } }).exec();
     }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(user_schema_1.User.name)),
+    __param(1, (0, mongoose_1.InjectModel)(submission_schema_1.Submission.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
+        mongoose_2.Model,
         jwt_1.JwtService])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map

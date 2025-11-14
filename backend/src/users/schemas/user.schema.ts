@@ -16,6 +16,9 @@ export class User {
 
   @Prop({ required: true, unique: true })
   email: string;
+
+  @Prop({ type: [String], default: [] }) // 新增：收藏的文献ID数组
+  collections: string[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

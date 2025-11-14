@@ -17,38 +17,72 @@ const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const submission_schema_1 = require("./schemas/submission.schema");
-const users_service_1 = require("../users/users.service");
 let SubmissionsService = class SubmissionsService {
     submissionModel;
-    usersService;
-    constructor(submissionModel, usersService) {
+    constructor(submissionModel) {
         this.submissionModel = submissionModel;
-        this.usersService = usersService;
     }
-    async reviewSubmission(submissionId, reviewDto, moderatorId) {
-        const submission = await this.submissionModel.findById(submissionId);
+    async create(createSubmissionDto, userId) {
+        const createdSubmission = new this.submissionModel({
+            ...createSubmissionDto,
+            status: 'pending',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        });
+        return createdSubmission.save();
+    }
+    async findAll() {
+        return this.submissionModel.find().sort({ createdAt: -1 }).exec();
+    }
+    async findOne(id) {
+        const submission = await this.submissionModel.findById(id).exec();
         if (!submission) {
             throw new common_1.NotFoundException('文献不存在');
         }
-        await this.usersService.findById(moderatorId);
+        return submission;
+    }
+    async findPending() {
+        return this.submissionModel
+            .find({ status: 'pending' })
+            .sort({ createdAt: -1 })
+            .exec();
+    }
+    async findApproved() {
+        return this.submissionModel
+            .find({ status: 'approved' })
+            .sort({ reviewTime: -1 })
+            .exec();
+    }
+    async review(id, reviewDto, moderatorId) {
+        const submission = await this.submissionModel.findById(id).exec();
+        if (!submission) {
+            throw new common_1.NotFoundException('文献不存在');
+        }
+        if (submission.status !== 'pending') {
+            throw new common_1.ForbiddenException('该文献已审核，不可重复操作');
+        }
         submission.status = reviewDto.status;
         submission.reviewComment = reviewDto.reviewComment;
         submission.moderatorId = moderatorId;
         submission.reviewTime = new Date();
+        submission.updatedAt = new Date();
         return submission.save();
     }
-    async findReviewed() {
-        return this.submissionModel
-            .find({ status: { $in: ['approved', 'rejected'] } })
-            .sort({ reviewTime: -1 })
-            .exec();
+    async remove(id, userId, isModerator) {
+        const submission = await this.submissionModel.findById(id).exec();
+        if (!submission) {
+            throw new common_1.NotFoundException('文献不存在');
+        }
+        if (!isModerator && submission.userId !== userId) {
+            throw new common_1.ForbiddenException('无删除权限');
+        }
+        await this.submissionModel.findByIdAndDelete(id).exec();
     }
 };
 exports.SubmissionsService = SubmissionsService;
 exports.SubmissionsService = SubmissionsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(submission_schema_1.Submission.name)),
-    __metadata("design:paramtypes", [mongoose_2.Model,
-        users_service_1.UsersService])
+    __metadata("design:paramtypes", [mongoose_2.Model])
 ], SubmissionsService);
 //# sourceMappingURL=submissions.service.js.map

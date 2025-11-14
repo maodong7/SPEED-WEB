@@ -41,4 +41,12 @@ export class SubmissionsController {
       data: await this.submissionsService.findReviewed(),
     };
   }
+  // 新增：查询已通过审核的文献（无需登录，供所有用户浏览）
+@Get('approved')
+async findApproved() {
+  return {
+    status: HttpStatus.OK,
+    data: await this.submissionsService.findApproved(),
+  };
+}
 }

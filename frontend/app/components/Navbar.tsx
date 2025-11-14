@@ -1,25 +1,52 @@
-'use client'; // 关键：标记为仅客户端组件
+'use client';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+// 用户类型定义
+type User = {
+  username: string;
+  role: 'user' | 'moderator';
+  email: string;
+};
+
 export default function Navbar() {
-  const [user, setUser] = useState({ role: '' });
+  const [user, setUser] = useState<User | null>(null);
   const [isLogin, setIsLogin] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
-  // 仅在客户端执行localStorage操作
+  // 页面加载时初始化登录状态
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const storedToken = localStorage.getItem('token');
-    setUser(storedUser ? JSON.parse(storedUser) : { role: '' });
-    setIsLogin(!!storedToken);
-  }, []);
+    const initLoginStatus = () => {
+      const storedUser = localStorage.getItem('user');
+      const storedToken = localStorage.getItem('token');
+      if (storedUser && storedToken) {
+        setUser(JSON.parse(storedUser));
+        setIsLogin(true);
+      } else {
+        setUser(null);
+        setIsLogin(false);
+        // 未登录状态下，拦截需要登录的页面
+        const needLoginPaths = ['/submit', '/explore', '/profile', '/moderate'];
+        if (needLoginPaths.includes(pathname)) {
+          router.push('/auth/login');
+        }
+      }
+    };
 
+    initLoginStatus();
+    // 监听本地存储变化（处理退出登录、登录状态变更）
+    window.addEventListener('storage', initLoginStatus);
+    return () => window.removeEventListener('storage', initLoginStatus);
+  }, [router, pathname]);
+
+  // 退出登录
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    setUser(null);
+    setIsLogin(false);
     router.push('/');
     window.location.reload();
   };
@@ -38,13 +65,16 @@ export default function Navbar() {
             </>
           ) : (
             <>
+              <Link href="/explore" style={{ color: 'white', textDecoration: 'none' }}>文献浏览</Link>
               <Link href="/submit" style={{ color: 'white', textDecoration: 'none' }}>提交文献</Link>
-              {user.role === 'moderator' && (
+              {user?.role === 'moderator' && (
                 <Link href="/moderate" style={{ color: 'white', textDecoration: 'none' }}>审核中心</Link>
               )}
+              <Link href="/profile" style={{ color: 'white', textDecoration: 'none' }}>个人中心</Link>
+              <span style={{ color: '#ccc' }}>欢迎，{user?.username}</span>
               <button 
                 onClick={handleLogout}
-                style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', textDecoration: 'none' }}
+                style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', textDecoration: 'underline' }}
               >
                 退出登录
               </button>
